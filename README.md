@@ -45,7 +45,7 @@ nebo
 > Projdi adresy v mém rodokmenu a udělej mapu domů předků.
 
 Používáte-li skill **[rodokmen](https://github.com/sarsonj/rodokmen-skill)** (průvodce rodokmenem z českých matrik od jiného autora), stare-adresy si
-umí adresy načíst přímo z jeho projektu (`data/osoby.py`) a mapa domů jde použít i na rodinném webu
+umí adresy načíst přímo z jeho projektu (`data/osoby.json`, ve starších verzích `data/osoby.py`) a mapa domů jde použít i na rodinném webu
 (viz `reference/vystup.md`). Projekt rodokmenu přitom nemění.
 
 **Čas:** je-li kód skici obce známý (návod obsahuje tabulku nalezených skic), ves se třemi adresami zabere asi

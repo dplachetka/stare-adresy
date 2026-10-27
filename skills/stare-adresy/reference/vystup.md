@@ -26,5 +26,5 @@ Vlastnosti bodu (`properties`), chybějící hodnoty se vynechávají:
 Doporučení pro zobrazení: barva podle `jistota`; `D` (jen obec) kreslit jako obec, ne jako dům; u výřezu uvést zdroj
 („Národní archiv, Indikační skici, <skica>; ČÚZK – on-line“). Podklad map ČÚZK uvádět „ČÚZK“.
 
-**Vstup ze skillu rodokmen:** `z_rodokmenu.py <projekt> adresy.json` načte zmínky „obec čp. X“ z `data/osoby.py`
-(bez spuštění souboru) a skloněné názvy převede podle `data/mista.json`. Projekt rodokmenu nemění.
+**Vstup ze skillu rodokmen:** `z_rodokmenu.py <projekt> adresy.json` načte zmínky „obec čp. X“ z `data/osoby.json`
+(starší `data/osoby.py` bez spuštění souboru) a skloněné názvy převede podle `data/mista.json`. Projekt rodokmenu nemění.

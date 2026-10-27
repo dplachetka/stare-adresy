@@ -3,12 +3,14 @@
 
 Použití: z_rodokmenu.py <složka projektu rodokmenu> <adresy.json> [--od 1700] [--do 1925]
 
-Čte `data/osoby.py` (předci P, příbuzní SIDE) – soubor se NEspouští, jen se rozebere (ast) – a z faktů `f`, textů `t`
+Čte `data/osoby.json` (novější verze skillu rodokmen), jinak `data/osoby.py` (starší; soubor se NEspouští, jen se
+rozebere – ast). Z předků P a příbuzných SIDE, jejich faktů `f`, textů `t`
 a poznámek vybere zmínky „<obec> čp. <číslo>“ s rokem a osobou. Skloněné tvary obcí („v Lhotě“, „z Dlouhé
 Vsi“) převede podle `data/mista.json` (pole `re`) na základní název; co nepozná, označí `obec_overit`.
 Katastrální území doplní, je-li jednoznačné (jinak `ku_kandidati`). Existující adresy doplní (osoby, rok), nic nemaže.
 
 Zmínky po roce --do (výchozí 1925) přeskočí: skici jsou z let 1824–1843 a mladší adresy patří často žijícím lidem.
+Ze stejného důvodu přeskočí i zmínky bez roku (rok není v textu ani v letech osoby).
 Projekt rodokmenu nemění.
 """
 import ast, json, os, re, sys, unicodedata
@@ -84,8 +86,40 @@ def najdi_ku(text, misto=None):
     return text, []
 
 
-def osoby(path):
-    """Seznam (číslo, jméno, roky, [texty]) z osoby.py."""
+def _osoby_json(path):
+    """[(číslo, záznam)] z osoby.json: P = {"8": {…}}, SIDE = [{"k": 16, …}]; klíče s „_“ jsou poznámky."""
+    try:
+        d = json.load(open(path, encoding="utf-8"))
+    except ValueError as ex:
+        raise SystemExit(f"{path}: chyba v JSON ({ex}) – v projektu rodokmenu ji ukáže tools/kontrola.py")
+    out = [(int(k), z) for k, z in (d.get("P") or {}).items() if k.isdigit() and isinstance(z, dict) and z.get("n")]
+    out += [(z["k"], z) for z in d.get("SIDE") or [] if isinstance(z, dict) and z.get("n") and "k" in z]
+    return out
+
+
+def osoby(proj):
+    """Seznam (číslo, jméno, roky, [texty]) z data/osoby.json, jinak ze staršího data/osoby.py."""
+    pj, pp = os.path.join(proj, "data", "osoby.json"), os.path.join(proj, "data", "osoby.py")
+    if os.path.exists(pj):
+        out = _osoby_json(pj)
+    elif os.path.exists(pp):
+        out = _osoby_py(pp)
+    else:
+        raise SystemExit(f"V {os.path.join(proj, 'data')} není osoby.json ani osoby.py – je to složka projektu rodokmenu?")
+    res, videno = [], set()
+    for num, z in out:
+        key = (num, z.get("n"))
+        if key in videno:
+            continue
+        videno.add(key)
+        texty = [t for t in (z.get("f") or []) if isinstance(t, str)]
+        texty += [t for t in (z.get("t"), z.get("note")) if isinstance(t, str)]
+        res.append((num, z["n"], z.get("y") if isinstance(z.get("y"), str) else "", texty))
+    return res
+
+
+def _osoby_py(path):
+    """[(číslo, záznam)] ze staršího osoby.py – jen rozbor (ast), nic se nespouští."""
     tree = ast.parse(open(path, encoding="utf-8").read())
     out = []
     for node in ast.walk(tree):
@@ -98,16 +132,7 @@ def osoby(path):
             z = _zaznam(node)  # SIDE: dict(k=…, n=…, t=…)
             if z and z.get("n") and "k" in z:
                 out.append((z.get("k"), z))
-    res, videno = [], set()
-    for num, z in out:
-        key = (num, z.get("n"))
-        if key in videno:
-            continue
-        videno.add(key)
-        texty = [t for t in (z.get("f") or []) if isinstance(t, str)]
-        texty += [t for t in (z.get("t"), z.get("note")) if isinstance(t, str)]
-        res.append((num, z["n"], z.get("y") or "", texty))
-    return res
+    return out
 
 
 def main(argv):
@@ -139,13 +164,16 @@ def main(argv):
             ku_cache[text] = (nazev if not znamo else name, kand, znamo or bool(kand))
         return ku_cache[text]
 
-    zminky = {}
-    for num, jmeno, roky, texty in osoby(os.path.join(proj, "data", "osoby.py")):
+    zminky, bez_roku = {}, 0
+    for num, jmeno, roky, texty in osoby(proj):
         for t in texty:
             for m in CP_RE.finditer(t):
                 roky_t = [int(r) for r in ROK_RE.findall(t)] or [int(r) for r in ROK_RE.findall(roky)][:1]
                 rok = min(roky_t) if roky_t else None
-                if rok and not od <= rok <= do:
+                if rok is None:  # bez roku nejde poznat, že nejde o žijícího člověka
+                    bez_roku += 1
+                    continue
+                if not od <= rok <= do:
                     continue
                 obec, kand, znamo = normalizuj(m.group("obec"))
                 cp = int(m.group("cp"))
@@ -185,6 +213,8 @@ def main(argv):
     with open(out, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=1)
     print(f"{out}: {nove} nových, {upr} doplněných adres ({len(zminky)} zmínek z rodokmenu, roky {od}–{do})")
+    if bez_roku:
+        print(f"  přeskočeno {bez_roku} zmínek bez roku – patří-li předkovi, doplň rok do faktu nebo do let osoby")
     for e in data:
         if e["id"] in {f"{slug(o)}-{c}" for o, c in zminky}:
             stav = e.get("ku_kod") or ("? " + " | ".join(e.get("ku_kandidati", [])[:3]) if e.get("ku_kandidati") else "k.ú. nenalezeno")

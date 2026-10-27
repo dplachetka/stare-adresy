@@ -33,12 +33,12 @@ Nástroje jsou jen standardní knihovna Pythonu ≥ 3.9 a volají veřejné slu�
 | `kotvy.py <k.ú.> <soubor.json>` | převod souřadnic prohlížeče skici ↔ mapa podle 3–5 kotev (stavební parcela `st`, nebo dnešní č.p. `cp` tam, kde jsou parcely přečíslované): kde na skice hledat dnešní parcelu/dům, nebo kde ve skutečnosti leží budova ze skici |
 | `adresy.py nova/pridej/dopln/vypis <soubor.json>` | seznam adres a výpočet polohy (viz `adresy.py` bez parametrů) |
 | `mapa.py <výstupní složka> <adresy.json>` | prezentační mapa pro uživatele (podklad ČÚZK, výřezy skic) – index.html + files.json k publikování + `domy.geojson` pro jiné aplikace |
-| `z_rodokmenu.py <projekt rodokmenu> <adresy.json>` | načte adresy „obec čp. X“ z projektu skillu rodokmen (osoby.py, mista.json) |
+| `z_rodokmenu.py <projekt rodokmenu> <adresy.json>` | načte adresy „obec čp. X“ z projektu skillu rodokmen (osoby.json nebo osoby.py, mista.json) |
 
 ## Odkud vzít adresy
 - Uživatel je napíše (obec, č.p., rok, kdo tam žil).
-- **Projekt skillu rodokmen** (složka s `data/osoby.py`): `z_rodokmenu.py <projekt> adresy.json` vytáhne všechny
-  zmínky „obec čp. X“ do roku 1925 i s osobami a roky a doplní katastrální území. Projekt rodokmenu nemění. Výsledek
+- **Projekt skillu rodokmen** (složka s `data/osoby.json`, ve starších verzích `data/osoby.py`): `z_rodokmenu.py <projekt> adresy.json` vytáhne všechny
+  zmínky „obec čp. X“ do roku 1925 (zmínky bez roku vynechá) i s osobami a roky a doplní katastrální území. Projekt rodokmenu nemění. Výsledek
   ukaž uživateli a projdi s ním položky `obec_overit` a `ku_kandidati` (nejasné obce, stejnojmenná k.ú.). Po hotovém
   geokódování mu řekni, že `domy.geojson` z `mapa.py` lze použít i v mapě rodinného webu (`reference/vystup.md`).
 
