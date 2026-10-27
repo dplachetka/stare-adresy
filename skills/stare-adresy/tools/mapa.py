@@ -5,7 +5,8 @@ Použití: mapa.py <výstupní složka> <adresy.json> [další.json …] [--posu
 Vytvoří ve výstupní složce index.html a podklady/*.jpg (ČÚZK základní mapa a letecký snímek: přehled území,
 okolí každé obce a obec v plné podrobnosti) a files.json = seznam souborů k publikování
 ({"publikovaná/cesta": "zdrojový soubor"} – přesně tvar parametru `files` nástroje Artifact, s `root` = výstupní složka
-není potřeba, cesty jsou absolutní). Výřezy skic (`vyrez` v adrese) se berou relativně ke složce prvního adresy.json.
+není potřeba, cesty jsou absolutní). Výřezy skic (`vyrez` v adrese) se berou relativně ke složce prvního adresy.json
+a jen odtamtud (obrázky .jpg/.png/.webp; cestu mimo složku vynechá).
 Potřebuje ImageMagick (`magick`). Stažené dlaždice se ukládají do <výstup>/cache a znovu nestahují.
 
 Na mapě: barva = jistota, při oddálení jedna značka na obec, přepínač mapa / letecký snímek, seznam s filtry,
@@ -113,6 +114,7 @@ def domy_geojson(data):
 
 
 SKICA_URL = "https://ags.cuzk.gov.cz/archiv/openmap.html?typ=skicic&idrastru={}"
+OBRAZKY = (".jpg", ".jpeg", ".png", ".webp")
 
 
 def main(dest, files, posuny=False):
@@ -165,13 +167,18 @@ def main(dest, files, posuny=False):
     for f in os.listdir(OUT):
         publish[f"podklady/{f}"] = os.path.join(OUT, f)
     os.makedirs(os.path.join(DEST, "vyrezy"), exist_ok=True)
+    koren = os.path.realpath(ROOT)
     for e in data:  # výřezy zkopírovat k mapě, ať složka funguje i lokálně (index.html otevřený z disku)
         if e.get("vyrez"):
-            p = os.path.join(ROOT, e["vyrez"])
-            if os.path.exists(p):
+            p = os.path.realpath(os.path.join(ROOT, e["vyrez"]))
+            # jen obrázek ze složky adres – jinak by se cizí soubor (absolutní cesta, „../“, odkaz) zkopíroval a zveřejnil
+            if os.path.commonpath([p, koren]) != koren or not p.lower().endswith(OBRAZKY):
+                print(f"{e['id']}: výřez {e['vyrez']} není obrázek ve složce {ROOT} – vynechávám")
+                e.pop("vyrez")
+            elif os.path.exists(p):
                 rel = "vyrezy/" + os.path.basename(p)
                 cil = os.path.join(DEST, "vyrezy", os.path.basename(p))
-                if os.path.abspath(p) != os.path.abspath(cil):
+                if p != os.path.realpath(cil):
                     shutil.copy2(p, cil)
                 e["vyrez"] = rel
                 publish[rel] = cil
