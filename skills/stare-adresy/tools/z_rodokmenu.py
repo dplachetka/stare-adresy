@@ -4,8 +4,9 @@
 Použití: z_rodokmenu.py <složka projektu rodokmenu> <adresy.json> [--od 1700] [--do 1925]
 
 Čte `data/osoby.json` (novější verze skillu rodokmen), jinak `data/osoby.py` (starší; soubor se NEspouští, jen se
-rozebere – ast). Z předků P a příbuzných SIDE, jejich faktů `f`, textů `t`
-a poznámek vybere zmínky „<obec> čp. <číslo>“ s rokem a osobou. Skloněné tvary obcí („v Lhotě“, „z Dlouhé
+rozebere – ast). Z faktů `f` předků P a příbuzných SIDE (bez faktů z textu `t`) vybere zmínky „<obec> čp.
+<číslo>“ s rokem a osobou. Poznámky `note` nečte – bývá v nich dům sourozence či kmotra nebo odmítnuté číslo
+(stejné pravidlo jako mapa domů ve skillu rodokmen). Skloněné tvary obcí („v Lhotě“, „z Dlouhé
 Vsi“) převede podle `data/mista.json` (pole `re`) na základní název; co nepozná, označí `obec_overit`.
 Katastrální území doplní, je-li jednoznačné (jinak `ku_kandidati`). Existující adresy doplní (osoby, rok), nic nemaže.
 
@@ -112,8 +113,10 @@ def osoby(proj):
         if key in videno:
             continue
         videno.add(key)
+        # jen fakta, u starších záznamů bez faktů text t; poznámky ne (cizí nebo odmítnuté číslo domu)
         texty = [t for t in (z.get("f") or []) if isinstance(t, str)]
-        texty += [t for t in (z.get("t"), z.get("note")) if isinstance(t, str)]
+        if not texty and isinstance(z.get("t"), str):
+            texty = [z["t"]]
         res.append((num, z["n"], z.get("y") if isinstance(z.get("y"), str) else "", texty))
     return res
 
